@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Álgebra para Florencia</title>
+  <meta name="description" content="Mini app de álgebra con resolución paso a paso y tutora básica, optimizada para Android y PC." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mathsteps@0.2.0/dist/mathsteps.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjs@12.4.2/lib/browser/math.js"></script>
+  <style>
+    :root {
+      --bg: #08111f;
+      --bg-2: #0f172a;
+      --surface: rgba(15, 23, 42, 0.94);
+      --surface-2: rgba(30, 41, 59, 0.96);
+      --border: rgba(148, 163, 184, 0.16);
+      --text: #eef2ff;
+      --muted: #cbd5e1;
+      --muted-2: #94a3b8;
+      --primary: #38bdf8;
+      --primary-2: #2563eb;
+      --success: #22c55e;
+      --error: #fb7185;
+      --shadow-sm: 0 6px 18px rgba(2, 6, 23, 0.18);
+      --shadow-lg: 0 20px 55px rgba(2, 6, 23, 0.35);
+      --radius-xl: 24px;
+      --radius-lg: 18px;
+      --radius-md: 14px;
+      --radius-sm: 10px;
+      --transition: 180ms cubic-bezier(0.16, 1, 0.3, 1);
+      --container: min(1200px, calc(100% - 24px));
+      --tap: 52px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+    body {
+      min-height: 100vh;
+      font-family: "Inter", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 0% 0%, rgba(56,189,248,0.18), transparent 26%),
+        radial-gradient(circle at 100% 0%, rgba(37,99,235,0.14), transparent 22%),
+        linear-gradient(180deg, var(--bg), var(--bg-2));
+      overflow-x: hidden;
+    }
+
+    .container { width: var(--container); margin: 0 auto; }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: rgba(8, 17, 31, 0.78);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .topbar-inner {
+      width: var(--container);
+      margin: 0 auto;
+      min-height: 72px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 10px 0;
+    }
+
+    .badge {
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--primary), var(--primary-2));
+      box-shadow: var(--shadow-lg);
+      flex-shrink: 0;
+    }
+
+    .topbar strong { display: block; }
+    .topbar small { color: var(--muted-2); display: block; line-height: 1.5; }
+
+    main { padding: 20px 0 40px; }
+
+    .hero,
+    .layout {
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 20px;
+    }
+
+    .layout { margin-top: 20px; align-items: start; }
+    .stack { display: grid; gap: 20px; }
+
+    .card {
+      background: linear-gradient(180deg, rgba(15,23,42,0.98), rgba(30,41,59,0.92));
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-lg);
+      padding: 24px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.22);
+      color: #dff7ff;
+      font-size: 0.88rem;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 6vw, 3.9rem);
+      line-height: 1.02;
+      margin-bottom: 14px;
+      max-width: 12ch;
+      text-wrap: balance;
+    }
+
+    h2 {
+      font-size: clamp(1.2rem, 3.4vw, 1.8rem);
+      margin-bottom: 12px;
+      text-wrap: balance;
+    }
+
+    p, li {
+      line-height: 1.72;
+      color: var(--muted);
+      text-wrap: pretty;
+    }
+
+    .hero ul {
+      margin-top: 18px;
+      display: grid;
+      gap: 12px;
+      padding-left: 18px;
+    }
+
+    .example-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .example-btn,
+    button {
+      font: inherit;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      min-height: var(--tap);
+      padding: 13px 18px;
+      color: var(--text);
+      cursor: pointer;
+      transition: transform var(--transition), background var(--transition), box-shadow var(--transition), border-color var(--transition);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .example-btn {
+      border-radius: var(--radius-md);
+      background: rgba(255,255,255,0.04);
+      border-color: rgba(255,255,255,0.06);
+      text-align: left;
+      min-height: auto;
+    }
+
+    .example-btn strong { display: block; margin-bottom: 4px; }
+    .example-btn span { color: var(--muted-2); font-size: 0.92rem; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--primary-2));
+      box-shadow: 0 15px 30px rgba(37,99,235,0.24);
+      font-weight: 700;
+    }
+
+    .btn-secondary {
+      background: rgba(255,255,255,0.04);
+      border-color: var(--border);
+      font-weight: 700;
+    }
+
+    .btn-chip {
+      background: rgba(255,255,255,0.04);
+      border-color: rgba(148, 163, 184, 0.18);
+      min-height: 44px;
+      padding: 10px 14px;
+      font-weight: 600;
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      button:hover, .example-btn:hover { transform: translateY(-2px); }
+    }
+
+    .label {
+      display: block;
+      margin-bottom: 10px;
+      font-size: 0.94rem;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    textarea, input[type="text"] {
+      width: 100%;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.03);
+      color: var(--text);
+      padding: 16px;
+      font: inherit;
+      line-height: 1.7;
+      outline: none;
+      transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
+    }
+
+    textarea {
+      min-height: 148px;
+      resize: vertical;
+    }
+
+    textarea:focus, input[type="text"]:focus {
+      border-color: rgba(56,189,248,0.5);
+      box-shadow: 0 0 0 4px rgba(56,189,248,0.12);
+      background: rgba(255,255,255,0.05);
+    }
+
+    .toolbar, .chipbar, .assistant-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .panel {
+      padding: 18px;
+      border-radius: var(--radius-lg);
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .result {
+      color: #f8fbff;
+      line-height: 1.7;
+      word-break: break-word;
+      font-size: 1.04rem;
+    }
+
+    .status {
+      margin-top: 16px;
+      padding: 14px 16px;
+      border-radius: var(--radius-md);
+      display: none;
+      line-height: 1.6;
+      font-size: 0.95rem;
+    }
+
+    .status.show { display: block; }
+    .status.ok {
+      background: rgba(34,197,94,0.1);
+      border: 1px solid rgba(34,197,94,0.2);
+      color: #e6ffef;
+    }
+    .status.error {
+      background: rgba(251,113,133,0.1);
+      border: 1px solid rgba(251,113,133,0.2);
+      color: #ffe4ea;
+    }
+
+    .steps, .assistant-messages {
+      display: grid;
+      gap: 12px;
+    }
+
+    .step, .assistant-bubble {
+      display: grid;
+      grid-template-columns: 38px 1fr;
+      gap: 12px;
+      align-items: start;
+      padding: 14px;
+      border-radius: var(--radius-md);
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .assistant-bubble.user {
+      background: rgba(56,189,248,0.08);
+      border-color: rgba(56,189,248,0.16);
+    }
+
+    .step-number, .assistant-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      background: rgba(56,189,248,0.12);
+      border: 1px solid rgba(56,189,248,0.18);
+      color: #dff7ff;
+      flex-shrink: 0;
+    }
+
+    .assistant-bubble.user .assistant-avatar {
+      background: rgba(34,197,94,0.12);
+      border-color: rgba(34,197,94,0.18);
+      color: #e6ffef;
+    }
+
+    .step strong, .assistant-bubble strong { display: block; margin-bottom: 6px; }
+
+    .math-line {
+      display: inline-block;
+      margin-top: 6px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: rgba(8,17,31,0.62);
+      border: 1px solid rgba(255,255,255,0.05);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.95rem;
+      overflow-wrap: anywhere;
+    }
+
+    .mini-note {
+      color: var(--muted-2);
+      font-size: 0.92rem;
+      margin-top: 14px;
+      line-height: 1.7;
+    }
+
+    @media (max-width: 980px) {
+      .hero, .layout { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 640px) {
+      main { padding-top: 16px; }
+      .topbar-inner {
+        min-height: 64px;
+        align-items: flex-start;
+      }
+      .card { padding: 18px; border-radius: 20px; }
+      .example-grid { grid-template-columns: 1fr; }
+      .toolbar, .chipbar, .assistant-toolbar { flex-direction: column; }
+      button { width: 100%; }
+      .step, .assistant-bubble {
+        grid-template-columns: 34px 1fr;
+        gap: 10px;
+      }
+      .step-number, .assistant-avatar {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+      }
+      textarea { min-height: 132px; }
+      .assistant-toolbar input,
+      .assistant-toolbar button { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="badge">A</div>
+      <div>
+        <strong>Álgebra para Florencia</strong>
+        <small>Versión final para Android y PC: resuelve ejercicios, muestra pasos y responde dudas básicas.</small>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <article class="card">
+        <div class="eyebrow">Versión final</div>
+        <h1>Escribe un ejercicio y mira cómo se resuelve.</h1>
+        <p>
+          Esta versión está pensada para celular y computador. Intenta leer el ejercicio, resolverlo y mostrar el procedimiento paso a paso,
+          además de incluir una tutora básica para responder dudas sobre lo que se hizo.
+        </p>
+        <ul>
+          <li>Lineal: <strong>2x + 3x = 25</strong></li>
+          <li>Simplificación: <strong>3x + 2x - x + 4</strong></li>
+          <li>Cuadrática: <strong>x^2 - 9 = 0</strong></li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <h2>Pruebas rápidas</h2>
+        <p>Toca un ejemplo para cargarlo y luego presiona resolver.</p>
+        <div class="example-grid">
+          <button class="example-btn" type="button" data-example="2x + 3x = 25">
+            <strong>Ecuación lineal</strong>
+            <span>2x + 3x = 25</span>
+          </button>
+          <button class="example-btn" type="button" data-example="3x + 2x - x + 4">
+            <strong>Simplificar</strong>
+            <span>3x + 2x - x + 4</span>
+          </button>
+          <button class="example-btn" type="button" data-example="x^2 - 9 = 0">
+            <strong>Cuadrática</strong>
+            <span>x^2 - 9 = 0</span>
+          </button>
+          <button class="example-btn" type="button" data-example="x^2 + 5x + 6 = 0">
+            <strong>Cuadrática 2</strong>
+            <span>x^2 + 5x + 6 = 0</span>
+          </button>
+        </div>
+        <p class="mini-note">
+          Consejo: usa <strong>x^2</strong> para potencias y escribe el ejercicio como expresión matemática, no en palabras.
+        </p>
+      </article>
+    </section>
+
+    <section class="layout">
+      <div class="stack">
+        <article class="card">
+          <label for="problemInput" class="label">Escribe aquí la ecuación o expresión</label>
+          <textarea id="problemInput" placeholder="Ejemplo: x^2 - 9 = 0"></textarea>
+
+          <div class="toolbar">
+            <button type="button" class="btn-primary" id="solveBtn">Resolver y explicar</button>
+            <button type="button" class="btn-secondary" id="clearBtn">Limpiar</button>
+          </div>
+
+          <div class="chipbar">
+            <button type="button" class="btn-chip" data-insert="x^2">Insertar x^2</button>
+            <button type="button" class="btn-chip" data-insert="()">Insertar ( )</button>
+            <button type="button" class="btn-chip" data-insert=" = ">Insertar =</button>
+            <button type="button" class="btn-chip" data-insert=" + ">Insertar +</button>
+            <button type="button" class="btn-chip" data-insert=" - ">Insertar -</button>
+          </div>
+
+          <div id="statusBox" class="status"></div>
+        </article>
+
+        <article class="card">
+          <h2>Paso a paso</h2>
+          <div class="panel">
+            <div id="stepsBox" class="steps"></div>
+          </div>
+        </article>
+      </div>
+
+      <div class="stack">
+        <article class="card">
+          <h2>Resultado</h2>
+          <div class="panel">
+            <div id="resultBox" class="result">Aquí aparecerá el resultado.</div>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2>Tutora básica</h2>
+          <div class="panel">
+            <div id="assistantMessages" class="assistant-messages">
+              <div class="assistant-bubble">
+                <div class="assistant-avatar">IA</div>
+                <div>
+                  <strong>Asistente</strong>
+                  <p>Puedes preguntarme cosas como: “no entendí el paso 2”, “¿qué hago primero?”, “ayúdame con este ejercicio” o “¿por qué divide?”.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="assistant-toolbar">
+            <input type="text" id="assistantInput" placeholder="Escribe tu duda aquí...">
+            <button type="button" class="btn-primary" id="assistantBtn">Preguntar</button>
+          </div>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const input = document.getElementById('problemInput');
+    const resultBox = document.getElementById('resultBox');
+    const stepsBox = document.getElementById('stepsBox');
+    const statusBox = document.getElementById('statusBox');
+    const assistantMessages = document.getElementById('assistantMessages');
+    const assistantInput = document.getElementById('assistantInput');
+
+    let latestOutcome = null;
+    let latestRawProblem = '';
+
+    function escapeHtml(text) {
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function normalizeExpression(str) {
+      return str
+        .replace(/\s+/g, ' ')
+        .replace(/(\d)([a-zA-Z])/g, '$1*$2')
+        .replace(/([a-zA-Z])(\d)/g, '$1*$2')
+        .replace(/\)\(/g, ')*(')
+        .replace(/(\d)\(/g, '$1*(')
+        .replace(/\)([a-zA-Z])/g, ')*$1')
+        .trim();
+    }
+
+    function showStatus(message, type = 'ok') {
+      statusBox.className = `status show ${type}`;
+      statusBox.textContent = message;
+    }
+
+    function clearStatus() {
+      statusBox.className = 'status';
+      statusBox.textContent = '';
+    }
+
+    function clearOutputs() {
+      resultBox.innerHTML = 'Aquí aparecerá el resultado.';
+      stepsBox.innerHTML = '';
+    }
+
+    function renderStepCards(items, target) {
+      if (!items.length) {
+        target.innerHTML = `
+          <div class="step">
+            <div class="step-number">1</div>
+            <div>
+              <strong>Sin pasos disponibles</strong>
+              <div class="math-line">No se pudieron generar pasos para este ejercicio.</div>
+            </div>
+          </div>`;
+        return;
+      }
+
+      target.innerHTML = items.map((item, index) => `
+        <div class="step">
+          <div class="step-number">${index + 1}</div>
+          <div>
+            <strong>${escapeHtml(item.title)}</strong>
+            ${item.text ? `<p>${escapeHtml(item.text)}</p>` : ''}
+            ${item.math ? `<div class="math-line">${escapeHtml(item.math)}</div>` : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function addAssistantMessage(role, text) {
+      const bubble = document.createElement('div');
+      bubble.className = `assistant-bubble ${role}`;
+      bubble.innerHTML = `
+        <div class="assistant-avatar">${role === 'user' ? 'TÚ' : 'IA'}</div>
+        <div>
+          <strong>${role === 'user' ? 'Tu pregunta' : 'Asistente'}</strong>
+          <p>${escapeHtml(text)}</p>
+        </div>
+      `;
+      assistantMessages.appendChild(bubble);
+      bubble.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+
+    function friendlyMathstepsAction(type) {
+      const map = {
+        COMBINE_LIKE_TERMS: 'Junta términos semejantes.',
+        SIMPLIFY_ARITHMETIC: 'Simplifica la operación numérica.',
+        ADD_TO_BOTH_SIDES: 'Pasa el término al otro lado haciendo la misma operación en ambos lados.',
+        SUBTRACT_FROM_BOTH_SIDES: 'Resta la misma cantidad en ambos lados para aislar la variable.',
+        DIVIDE_FROM_BOTH_SIDES: 'Divide ambos lados para dejar sola la variable.',
+        MULTIPLY_BOTH_SIDES_BY_INVERSE_FRACTION: 'Multiplica para eliminar la fracción.',
+        DISTRIBUTE: 'Distribuye el factor dentro del paréntesis.',
+        CANCEL_MINUSES: 'Simplifica los signos negativos.',
+        REARRANGE_COEFF: 'Ordena la expresión para verla más clara.',
+        COLLECT_AND_COMBINE_LIKE_TERMS: 'Ordena y junta términos semejantes.'
+      };
+      return map[type] || 'Aplica el siguiente cambio en la expresión.';
+    }
+
+    function buildLinearExplanation(steps) {
+      return steps.map((step, index) => ({
+        title: `Paso ${index + 1}`,
+        text: friendlyMathstepsAction(step.changeType),
+        math: step.newEquation ? step.newEquation.ascii() : ''
+      }));
+    }
+
+    function parseQuadraticCoefficients(expr) {
+      const cleaned = expr.replace(/\s+/g, '').replace(/\*/g, '');
+      const normalized = cleaned.replace(/-/g, '+-');
+      const parts = normalized.split('+').filter(Boolean);
+      let a = 0, b = 0, c = 0;
+
+      for (const part of parts) {
+        if (part.includes('x^2')) {
+          const coeff = part.replace('x^2', '');
+          if (coeff === '' || coeff === '+') a += 1;
+          else if (coeff === '-') a -= 1;
+          else a += Number(coeff);
+        } else if (part.includes('x')) {
+          const coeff = part.replace('x', '');
+          if (coeff === '' || coeff === '+') b += 1;
+          else if (coeff === '-') b -= 1;
+          else b += Number(coeff);
+        } else {
+          c += Number(part);
+        }
+      }
+
+      return { a, b, c };
+    }
+
+    function isQuadraticEquation(raw) {
+      return raw.includes('=') && raw.includes('x^2');
+    }
+
+    function isSimpleExpression(raw) {
+      return !raw.includes('=');
+    }
+
+    function solveQuadratic(raw) {
+      const normalized = normalizeExpression(raw);
+      const parts = normalized.split('=');
+      if (parts.length !== 2) throw new Error('Formato inválido');
+
+      const moved = math.simplify(`(${parts[0]}) - (${parts[1]})`).toString();
+      const poly = moved.replace(/\s+/g, '');
+      const { a, b, c } = parseQuadraticCoefficients(poly);
+      if (!a) throw new Error('No es cuadrática');
+
+      const D = b*b - 4*a*c;
+      const steps = [];
+
+      steps.push({ title: 'Paso 1', text: 'Primero pasa toda la ecuación a la forma ax^2 + bx + c = 0.', math: `${poly} = 0` });
+      steps.push({ title: 'Paso 2', text: 'Identifica los coeficientes del polinomio.', math: `a = ${a}, b = ${b}, c = ${c}` });
+      steps.push({ title: 'Paso 3', text: 'Calcula el discriminante usando b^2 - 4ac.', math: `D = (${b})^2 - 4·(${a})·(${c}) = ${D}` });
+
+      let result = '';
+
+      if (D > 0) {
+        const x1 = (-b + Math.sqrt(D)) / (2*a);
+        const x2 = (-b - Math.sqrt(D)) / (2*a);
+        steps.push({ title: 'Paso 4', text: 'Como el discriminante es positivo, hay dos soluciones reales.', math: 'x = (-b ± √D) / 2a' });
+        steps.push({ title: 'Paso 5', text: 'Sustituye los valores en la fórmula general.', math: `x = (${(-b)} ± √${D}) / ${2*a}` });
+        steps.push({ title: 'Paso 6', text: 'Calcula ambas soluciones por separado.', math: `x1 = ${x1}, x2 = ${x2}` });
+        result = `x1 = ${x1}, x2 = ${x2}`;
+      } else if (D === 0) {
+        const x = -b / (2*a);
+        steps.push({ title: 'Paso 4', text: 'Como el discriminante vale 0, solo hay una solución real.', math: `x = ${-b} / ${2*a}` });
+        steps.push({ title: 'Paso 5', text: 'Haz la división para obtener la raíz.', math: `x = ${x}` });
+        result = `x = ${x}`;
+      } else {
+        steps.push({ title: 'Paso 4', text: 'Como el discriminante es negativo, no hay soluciones reales.', math: `D = ${D} < 0` });
+        result = 'No tiene soluciones reales.';
+      }
+
+      return { type: 'quadratic', result, steps, raw };
+    }
+
+    function solveLinear(raw) {
+      const normalized = normalizeExpression(raw);
+      const steps = mathsteps.solveEquation(normalized);
+      if (!steps.length) throw new Error('Sin pasos');
+      const finalEquation = steps[steps.length - 1].newEquation.ascii();
+      return { type: 'linear', result: finalEquation, steps: buildLinearExplanation(steps), raw };
+    }
+
+    function simplifyOnly(raw) {
+      const normalized = normalizeExpression(raw);
+      const steps = mathsteps.simplifyExpression(normalized) || [];
+      const simplified = math.simplify(normalized).toString();
+
+      const adaptedSteps = steps.length
+        ? steps.map((step, index) => ({
+            title: `Paso ${index + 1}`,
+            text: friendlyMathstepsAction(step.changeType),
+            math: step.newNode ? step.newNode.toString() : simplified
+          }))
+        : [{
+            title: 'Paso 1',
+            text: 'Simplifica la expresión juntando términos semejantes y resolviendo operaciones posibles.',
+            math: simplified
+          }];
+
+      return { type: 'simplify', result: simplified, steps: adaptedSteps, raw };
+    }
+
+    function resolveProblem() {
+      clearStatus();
+      const raw = input.value.trim();
+      clearOutputs();
+
+      if (!raw) {
+        showStatus('Escribe primero un ejercicio.', 'error');
+        return;
+      }
+
+      try {
+        let outcome;
+
+        if (isQuadraticEquation(raw)) {
+          outcome = solveQuadratic(raw);
+          showStatus('Se resolvió la ecuación cuadrática y se armó su paso a paso.', 'ok');
+        } else if (!isSimpleExpression(raw)) {
+          outcome = solveLinear(raw);
+          showStatus('Se resolvió la ecuación y se generó su procedimiento.', 'ok');
+        } else {
+          outcome = simplifyOnly(raw);
+          showStatus('Se simplificó la expresión y se explicó el procedimiento.', 'ok');
+        }
+
+        latestOutcome = outcome;
+        latestRawProblem = raw;
+        resultBox.innerHTML = escapeHtml(outcome.result);
+        renderStepCards(outcome.steps, stepsBox);
+      } catch (error) {
+        latestOutcome = null;
+        latestRawProblem = raw;
+        resultBox.innerHTML = 'No pude resolver ese ejercicio con el formato actual.';
+        renderStepCards([{
+          title: 'Revisa el formato',
+          text: 'Prueba escribir el ejercicio con números, x, signos y paréntesis.',
+          math: 'Ejemplo: 2x + 3x = 25'
+        }], stepsBox);
+        showStatus('No se pudo resolver. Revisa cómo escribiste el ejercicio.', 'error');
+      }
+    }
+
+    function answerAssistant(question) {
+      const q = question.toLowerCase();
+      const hasOutcome = !!latestOutcome;
+
+      if (!hasOutcome) {
+        if (q.includes('ayud') || q.includes('ejercicio') || q.includes('resolver')) {
+          return 'Primero escribe el ejercicio en el cuadro principal y presiona “Resolver y explicar”. Después podré responder dudas según ese ejercicio.';
+        }
+        return 'Necesito que primero escribas y resuelvas un ejercicio para ayudarte mejor. Por ejemplo: 2x + 3x = 25.';
+      }
+
+      if (q.includes('no entend') || q.includes('explica') || q.includes('paso 1')) {
+        return latestOutcome.steps[0]
+          ? `En el paso 1 se hace esto: ${latestOutcome.steps[0].text} Resultado de ese paso: ${latestOutcome.steps[0].math}.`
+          : 'Todavía no tengo un paso 1 generado para ese ejercicio.';
+      }
+
+      if (q.includes('paso 2')) {
+        return latestOutcome.steps[1]
+          ? `En el paso 2 se hace esto: ${latestOutcome.steps[1].text} Queda así: ${latestOutcome.steps[1].math}.`
+          : 'Ese ejercicio no tiene un paso 2 disponible en este momento.';
+      }
+
+      if (q.includes('paso 3')) {
+        return latestOutcome.steps[2]
+          ? `En el paso 3 se hace esto: ${latestOutcome.steps[2].text} Queda así: ${latestOutcome.steps[2].math}.`
+          : 'Ese ejercicio no tiene un paso 3 disponible en este momento.';
+      }
+
+      if (q.includes('que hago primero') || q.includes('qué hago primero') || q.includes('como empiezo') || q.includes('cómo empiezo')) {
+        return latestOutcome.steps[0]
+          ? `Lo primero que debes hacer en este ejercicio es: ${latestOutcome.steps[0].text}`
+          : 'Primero intenta ordenar el ejercicio y detectar si es ecuación o solo una expresión.';
+      }
+
+      if (q.includes('por que divide') || q.includes('por qué divide')) {
+        return 'Se divide cuando ya quieres dejar la variable sola. Si algo multiplica a x, divides ambos lados por ese número para despejarla sin cambiar la igualdad.';
+      }
+
+      if (q.includes('por que resta') || q.includes('por qué resta') || q.includes('por que pasa') || q.includes('por qué pasa')) {
+        return 'Se resta o se suma en ambos lados para mover números o términos y dejar la variable sola. La idea es hacer la misma operación a ambos lados para que la ecuación siga siendo equivalente.';
+      }
+
+      if (q.includes('ayudame') || q.includes('ayúdame') || q.includes('explicame') || q.includes('explícame')) {
+        return `El ejercicio actual es: ${latestRawProblem}. El resultado obtenido fue: ${latestOutcome.result}. El primer paso recomendado fue: ${latestOutcome.steps[0] ? latestOutcome.steps[0].text : 'ordenar el ejercicio'}.`;
+      }
+
+      if (latestOutcome.type === 'quadratic') {
+        if (q.includes('formula') || q.includes('fórmula') || q.includes('discriminante')) {
+          const discStep = latestOutcome.steps.find(step => step.math && step.math.includes('D ='));
+          return discStep
+            ? `En esta cuadrática usamos el discriminante para saber cuántas soluciones reales hay. En tu ejercicio se calculó así: ${discStep.math}.`
+            : 'En una cuadrática, el discriminante se calcula con b^2 - 4ac.';
+        }
+        return 'Este ejercicio es cuadrático. Primero se lleva a la forma ax^2 + bx + c = 0, luego se identifican a, b y c, y después se calcula la solución.';
+      }
+
+      if (latestOutcome.type === 'linear') {
+        return 'Este ejercicio es una ecuación lineal. La idea general es juntar términos semejantes y después dejar la variable sola con operaciones iguales en ambos lados.';
+      }
+
+      if (latestOutcome.type === 'simplify') {
+        return 'Este ejercicio no se está resolviendo como ecuación, sino simplificando. Lo importante es juntar términos semejantes y ordenar la expresión.';
+      }
+
+      return 'Puedo ayudarte mejor si me preguntas algo más específico, por ejemplo: “no entendí el paso 2”, “qué hago primero” o “por qué divide”.';
+    }
+
+    document.getElementById('solveBtn').addEventListener('click', resolveProblem);
+
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      input.value = '';
+      clearOutputs();
+      clearStatus();
+      latestOutcome = null;
+      latestRawProblem = '';
+      input.focus();
+    });
+
+    document.querySelectorAll('[data-example]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        input.value = btn.dataset.example;
+        input.focus();
+      });
+    });
+
+    document.querySelectorAll('[data-insert]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const text = btn.dataset.insert;
+        const start = input.selectionStart;
+        const end = input.selectionEnd;
+        const current = input.value;
+        input.value = current.slice(0, start) + text + current.slice(end);
+        input.focus();
+        const caret = text === '()' ? start + 1 : start + text.length;
+        input.selectionStart = input.selectionEnd = caret;
+      });
+    });
+
+    function handleAssistant() {
+      const question = assistantInput.value.trim();
+      if (!question) return;
+      addAssistantMessage('user', question);
+      const answer = answerAssistant(question);
+      addAssistantMessage('assistant', answer);
+      assistantInput.value = '';
+      assistantInput.focus();
+    }
+
+    document.getElementById('assistantBtn').addEventListener('click', handleAssistant);
+    assistantInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleAssistant();
+      }
+    });
+  </script>
+</body>
+</html>
